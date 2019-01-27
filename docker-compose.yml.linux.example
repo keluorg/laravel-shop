@@ -1,0 +1,135 @@
+version:  '3.2'
+volumes:
+  lnmpsock:
+    external:
+      name: lnmpsock
+  lnmpdb:
+    external:
+      name: lnmpdb
+
+networks:
+  default:
+    external:
+      name: kelu
+
+services:
+  nginx:
+    image: openresty/openresty:alpine
+    container_name: nginx
+    restart: always
+    volumes:
+      - ./:/var/www/html:rw
+      - ./cdn:/var/www/cdn:rw
+      - ./index:/var/www/index:rw
+      - ./docker/letsencrypt/data:/etc/letsencrypt:rw
+      - ./docker/openresty/conf.d:/etc/nginx/conf.d:rw
+      - ./docker/openresty/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:rw
+      - ./docker/tmp/openresty:/etc/nginx/fastcgi_cache/one_hour:rw
+      - ./docker/log:/log:rw
+      - type: bind
+        source: lnmpsock
+        target: /sock
+    links:
+      - "php"
+      - "idea"
+      - "kms"
+      - "smokeping"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8443"
+
+  redis:
+    image: redis
+    container_name: redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - ./docker/tmp/redis:/data:rw
+    ports:
+      - "6379"
+
+  php:
+    build: ./docker/php
+    container_name: phpfpm
+    restart: always
+    volumes:
+      - ./:/var/www/html:rw
+      - ./docker/php/php-fpm.d:/usr/local/etc/php-fpm.d
+      - ./docker/php/conf/php-fpm.conf:/usr/local/etc/php-fpm.conf
+      - ./docker/log:/log:rw
+      - /var/run/docker.sock:/var/run/docker.sock
+      - type: bind
+        source: lnmpsock
+        target: /sock
+    privileged: true
+    links:
+      - "pgsql:pgsql"
+      - "redis:redis"
+
+  laravel:
+    build: ./docker/php
+    container_name: laravel-queue
+    restart: always
+    volumes:
+      - ./:/var/www/html:rw
+      - ./docker/php/php-fpm.d:/usr/local/etc/php-fpm.d
+      - ./docker/php/conf/php-fpm.conf:/usr/local/etc/php-fpm.conf
+      - ./docker/log:/log:rw
+      - /var/run/docker.sock:/var/run/docker.sock
+      - type: bind
+        source: lnmpsock
+        target: /sock
+    entrypoint:  [ "php", "artisan", "queue:work", "--sleep=3", "--daemon", "--tries=3" ]
+    links:
+      - "pgsql:pgsql"
+      - "redis:redis"
+
+  pgsql:
+    image: kelvinblood/pgsql:v9.4-alpine
+    container_name: pgsql
+    restart: always
+    volumes:
+ #      - ./psql/data:/var/lib/postgresql/data
+      - type: bind
+        source: lnmpdb
+        target: /var/lib/postgresql/data
+      - ./docker/psql/dump:/var/lib/postgresql/dump:rw
+    environment:
+      DBNAME: vpn
+    ports:
+      - "5432"
+
+  idea:
+    build: ./docker/idea
+    container_name: crack-idea
+    restart: always
+#    ports:
+#      - "1017"
+
+  kms:
+    build: ./docker/kms
+    container_name: crack-microsoft
+    restart: always
+#    ports:
+#      - "1688"
+
+  smokeping:
+    image: dperson/smokeping
+    container_name: ping
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+#    command: [
+#      "-t", "kelu;jp1;210.129.58.194",
+#      "-t", "kelu;aliyun;47.96.79.77"
+#    ]
+#    ports:
+#      - "80"
+    volumes:
+      - ./docker/smokeping/perl/Graphs.pm:/usr/share/perl5/Smokeping/Graphs.pm
+      - ./docker/smokeping/current:/etc/smokeping
+      - ./docker/smokeping/data:/var/lib/smokeping
+#      - ./docker/smokeping/General:/etc/smokeping/config.d/General
+#      - ./docker/smokeping/Presentation:/etc/smokeping/config.d/Presentation
+#      - ./docker/smokeping/tmp:/etc/smokeping/tmp

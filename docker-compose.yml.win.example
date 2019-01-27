@@ -1,0 +1,68 @@
+version:  '3.2'
+services:
+  nginx:
+    image: openresty/openresty:alpine
+    restart: always
+    volumes:
+      - ./:/var/www/html:rw
+      - ./docker/letsencrypt/data:/etc/letsencrypt:rw
+      - ./docker/openresty/conf.d_win:/etc/nginx/conf.d:rw
+      - ./docker/openresty/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:rw
+      - ./docker/tmp/openresty:/etc/nginx/fastcgi_cache/one_hour:rw
+      - ./docker/log:/log:rw
+      - type: bind
+        source: lnmpsock
+        target: /sock
+    links:
+      - "php"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8443:8443"
+
+  redis:
+    image: redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - ./docker/tmp/redis:/data:rw
+    ports:
+      - "6379:6379"
+
+  php:
+    build: ./docker/php
+    restart: always
+    volumes:
+      - ./:/var/www/html:rw
+      - ./docker/php/php-fpm.d:/usr/local/etc/php-fpm.d
+      - ./docker/php/conf/php-fpm.conf:/usr/local/etc/php-fpm.conf
+      - ./docker/log:/log:rw
+      - type: bind
+        source: lnmpsock
+        target: /sock
+    privileged: true
+    links:
+      - "pgsql:pgsql"
+      - "redis:redis"
+
+  pgsql:
+    image: kelvinblood/pgsql:v9.4-alpine
+    restart: always
+    volumes:
+ #      - ./psql/data:/var/lib/postgresql/data
+      - type: bind
+        source: lnmpdb
+        target: /var/lib/postgresql/data
+      - ./docker/psql/dump:/var/lib/postgresql/dump:rw
+    environment:
+      DBNAME: vpn
+    ports:
+      - "5432:5432"
+
+volumes:
+  lnmpsock:
+    external:
+      name: lnmpsock
+  lnmpdb:
+    external:
+      name: lnmpdb
