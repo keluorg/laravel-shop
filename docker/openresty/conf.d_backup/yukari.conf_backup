@@ -1,0 +1,53 @@
+server {
+    listen       80;
+    server_name  yukari.kelu.org;
+
+    access_log off;
+    error_log  off;
+
+    return 301 https://yukari.kelu.org$request_uri;
+}
+
+server {
+    listen       80;
+    server_name  yukari.kelu.org;
+
+    access_log /log/yukari.nginx.access.log;
+    error_log  /log/yukari.nginx.error.log;
+
+    root         /var/www/html/public;
+
+    location = / {
+        fastcgi_pass                               unix:/sock/www.sock;
+        fastcgi_index                              index.php;
+        include                                    fastcgi.conf;
+    }
+
+    location = /_status {
+        fastcgi_pass                               unix:/sock/www.sock;
+        include                                    fastcgi.conf;
+        fastcgi_param           SCRIPT_NAME        /_status;
+    }
+
+    location / {
+        # URLs to attempt, including pretty ones.
+        try_files   $uri $uri/ /index.php?$query_string;
+    }
+
+    # Remove trailing slash to please routing system.
+    if (!-d $request_filename) {
+        rewrite     ^/(.+)/$ /$1 permanent;
+    }
+
+    location ~* ^(.+\.php)(.*)$ {
+        # limit_req zone=req_perip burst=8;
+        fastcgi_pass                               unix:/sock/www.sock;
+        fastcgi_split_path_info                    ^(.+\.php)(.*)$;
+        include                                    fastcgi.conf;
+    }
+
+    location /nginx_status {
+       stub_status on;
+       access_log off;
+    }
+}
