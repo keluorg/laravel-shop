@@ -3,6 +3,7 @@ services:
   nginx:
     image: openresty/openresty:alpine
     restart: always
+    container_name: nginx
     volumes:
       - ./:/var/www/html:rw
       - ./docker/letsencrypt/data:/etc/letsencrypt:rw
@@ -20,18 +21,10 @@ services:
       - "443:443"
       - "8443:8443"
 
-  redis:
-    image: redis
-    restart: always
-    command: redis-server --appendonly yes
-    volumes:
-      - ./docker/tmp/redis:/data:rw
-    ports:
-      - "6379:6379"
-
   php:
     build: ./docker/php
     restart: always
+    container_name: php
     volumes:
       - ./:/var/www/html:rw
       - ./docker/php/php-fpm.d:/usr/local/etc/php-fpm.d
@@ -43,11 +36,23 @@ services:
     privileged: true
     links:
       - "pgsql:pgsql"
-      - "redis:redis"
+
+  yarn:
+    image: kelvinblood/yarn
+    restart: always
+    container_name: yarn
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./:/var/www/html:rw
+      - ./tmp/yarn:/usr/local/share/.cache/yarn
+#    entrypoint:  [ "/bin/bash"]
+#    working_dir: /var/www/html
 
   pgsql:
     image: kelvinblood/pgsql:v9.4-alpine
     restart: always
+    container_name: pgsql
     volumes:
  #      - ./psql/data:/var/lib/postgresql/data
       - type: bind
