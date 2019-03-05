@@ -1,11 +1,69 @@
-version:  '3.2'
+version:  '3.5'
 volumes:
-  lnmpsock:
-    external:
-      name: lnmpsock
-  lnmpdb:
-    external:
-      name: lnmpdb
+  lnmpsock: {}
+
+services:
+  nginx:
+    image: openresty/openresty:alpine
+    restart: always
+    container_name: nginx_dev
+    volumes:
+      - ./:/var/www/html:rw
+      - ./docker/openresty/conf.d_win:/etc/nginx/conf.d:rw
+      - ./docker/openresty/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:rw
+      - ./docker/tmp/openresty:/etc/nginx/fastcgi_cache/one_hour:rw
+      - ./docker/log:/log:rw
+      - lnmpsock:/sock:rw
+    links:
+      - "php"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8443:8443"
+
+  php:
+    build: ./docker/php
+    restart: always
+    container_name: php
+    volumes:
+      - ./:/var/www/html:rw
+      - ./docker/php/php-fpm.d:/usr/local/etc/php-fpm.d
+      - ./docker/php/conf/php-fpm.conf:/usr/local/etc/php-fpm.conf
+      - ./docker/log:/log:rw
+      - type: bind
+        source: lnmpsock
+        target: /sock
+    privileged: true
+    links:
+      - "pgsql:pgsql"
+
+  yarn:
+    image: kelvinblood/yarn
+    restart: always
+    container_name: yarn
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./:/var/www/html:rw
+      - ./tmp/yarn:/usr/local/share/.cache/yarn
+#    entrypoint:  [ "/bin/bash"]
+#    working_dir: /var/www/html
+
+  pgsql:
+    image: kelvinblood/pgsql:v9.4-alpine
+    restart: always
+    container_name: pgsql
+    volumes:
+ #      - ./psql/data:/var/lib/postgresql/data
+      - type: bind
+        source: lnmpdb
+        target: /var/lib/postgresql/data
+      - ./docker/psql/dump:/var/lib/postgresql/dump:rw
+    environment:
+      DBNAME: vpn
+    ports:
+      - "5432:5432"
+
 
 networks:
   default:
@@ -13,6 +71,20 @@ networks:
       name: kelu
 
 services:
+  dns:
+    image: andyshinn/dnsmasq:2.75
+    restart: always
+    container_name: dns
+    volumes:
+      - ./docker/dnsmasq/resolv.conf:/etc/resolv.dnsmasq:rw
+      - ./docker/dnsmasq/dnsmasq.hosts:/etc/dnsmasq.hosts:rw
+      - ./docker/dnsmasq/dnsmasq.conf:/etc/dnsmasq.conf:rw
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    cap_add:
+      - NET_ADMIN
+
   nginx:
     image: openresty/openresty:alpine
     container_name: nginx
@@ -23,17 +95,20 @@ services:
       - ./index:/var/www/index:rw
       - ./docker/letsencrypt/data:/etc/letsencrypt:rw
       - ./docker/openresty/conf.d:/etc/nginx/conf.d:rw
-      - ./docker/openresty/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:rw
+      - ./docker/openresty/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
+      - ./docker/openresty/conf/mime.types:/usr/local/openresty/nginx/conf/mime.types:ro
       - ./docker/tmp/openresty:/etc/nginx/fastcgi_cache/one_hour:rw
       - ./docker/log:/log:rw
-      - type: bind
-        source: lnmpsock
-        target: /sock
+#      - type: bind
+#        source: lnmpsock
+#        target: /sock
+      - lnmpsock:/sock
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     links:
       - "php"
       - "idea"
       - "kms"
-      - "smokeping"
     ports:
       - "80:80"
       - "443:443"
@@ -46,6 +121,8 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - ./docker/tmp/redis:/data:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     ports:
       - "6379"
 
@@ -59,13 +136,13 @@ services:
       - ./docker/php/conf/php-fpm.conf:/usr/local/etc/php-fpm.conf
       - ./docker/log:/log:rw
       - /var/run/docker.sock:/var/run/docker.sock
-      - type: bind
-        source: lnmpsock
-        target: /sock
+      - lnmpsock:/sock
+#      - type: bind
+#        source: lnmpsock
+#        target: /sock
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     privileged: true
-    links:
-      - "pgsql:pgsql"
-      - "redis:redis"
 
   laravel:
     build: ./docker/php
@@ -77,24 +154,28 @@ services:
       - ./docker/php/conf/php-fpm.conf:/usr/local/etc/php-fpm.conf
       - ./docker/log:/log:rw
       - /var/run/docker.sock:/var/run/docker.sock
-      - type: bind
-        source: lnmpsock
-        target: /sock
+      - lnmpsock:/sock
+#      - type: bind
+#        source: lnmpsock
+#        target: /sock
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     entrypoint:  [ "php", "artisan", "queue:work", "--sleep=3", "--daemon", "--tries=3" ]
-    links:
-      - "pgsql:pgsql"
-      - "redis:redis"
 
   pgsql:
     image: kelvinblood/pgsql:v9.4-alpine
     container_name: pgsql
     restart: always
     volumes:
- #      - ./psql/data:/var/lib/postgresql/data
-      - type: bind
-        source: lnmpdb
-        target: /var/lib/postgresql/data
+#      - ./docker/psql/data:/var/lib/postgresql/data
+#      - lnmpdb:/var/lib/postgresql/data
+#      - type: bind
+#        source: lnmpdb
+#        target: /var/lib/postgresql/data
+      - ./docker/psql/data:/var/lib/postgresql/data:rw
       - ./docker/psql/dump:/var/lib/postgresql/dump:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     environment:
       DBNAME: vpn
     ports:
@@ -104,6 +185,9 @@ services:
     build: ./docker/idea
     container_name: crack-idea
     restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
 #    ports:
 #      - "1017"
 
@@ -111,12 +195,15 @@ services:
     build: ./docker/kms
     container_name: crack-microsoft
     restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
 #    ports:
 #      - "1688"
 
   smokeping:
     image: dperson/smokeping
-    container_name: ping
+    container_name: smokeping
     restart: always
     environment:
       TZ: Asia/Shanghai
@@ -130,6 +217,107 @@ services:
       - ./docker/smokeping/perl/Graphs.pm:/usr/share/perl5/Smokeping/Graphs.pm
       - ./docker/smokeping/current:/etc/smokeping
       - ./docker/smokeping/data:/var/lib/smokeping
-#      - ./docker/smokeping/General:/etc/smokeping/config.d/General
-#      - ./docker/smokeping/Presentation:/etc/smokeping/config.d/Presentation
-#      - ./docker/smokeping/tmp:/etc/smokeping/tmp
+  blog:
+    command: jekyll serve
+    image: jekyll/jekyll:latest
+    container_name: blog
+    restart: always
+    volumes:
+      - ./docker/blog:/srv/jekyll
+      - ./docker/blog/_site:/srv/jekyll/_site
+      - ./docker/blog/vendor/bundle:/usr/local/bundle
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    environment:
+      JEKYLL_UID: 0
+      JEKYLL_GID: 0
+
+  prometheus:
+    image: prom/prometheus:v2.6.0
+    container_name: prometheus
+    volumes:
+      - ./docker/monitor/prometheus/:/etc/prometheus/
+      - prometheus_data:/prometheus
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    links:
+      - cadvisor:cadvisor
+      - alertmanager:alertmanager
+    depends_on:
+      - cadvisor
+      - dns
+    dns:
+      - 47.96.79.77
+    dns_search:
+      - kelu.org
+    restart: always
+  grafana:
+    image: grafana/grafana:5.4.2
+    container_name: grafana
+    user: "104"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/monitor/grafana/provisioning/:/etc/grafana/provisioning/
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    env_file:
+      - ./docker/monitor/grafana/config.monitoring
+    command: cfg:default.smtp.enabled=true cfg:default.smtp.host=smtp.exmail.qq.com:25 cfg:default.smtp.user=service@kelu.org cfg:default.smtp.password=Qwe321 cfg:default.smtp.from_address=service@kelu.org cfg:default.server.root_url=http://yukari.kelu.org:14000
+    depends_on:
+      - prometheus
+#    ports:
+#      - '14000:3000'
+    restart: always
+  node-exporter:
+    image: prom/node-exporter:v0.17.0
+    container_name: node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/rootfs:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+    ports:
+      - '20100:9100'
+    restart: always
+  alertmanager:
+    image: prom/alertmanager:v0.15.3
+    container_name: alertmanager
+#    ports:
+#      - 20093:9093
+    volumes:
+      - ./docker/monitor/alertmanager/:/etc/alertmanager/
+      - alert_data:/alertmanager
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    restart: always
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+
+  cadvisor:
+    image: google/cadvisor:v0.28.3
+    container_name: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+#    ports:
+#      - 19080:8080
+    restart: always
+
+#  git:
+#  rsync:
+#  webdav:
+#
