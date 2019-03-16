@@ -37,6 +37,22 @@ services:
     links:
       - "pgsql:pgsql"
 
+  composer:
+    image: composer:1.4.2
+    restart: always
+    container_name: composer
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./:/app:rw
+    entrypoint:  [ "/bin/bash"]
+#      - ./docker/php/php-fpm.d:/usr/local/etc/php-fpm.d
+#      - ./docker/php/conf/php-fpm.conf:/usr/local/etc/php-fpm.conf
+#      - ./docker/log:/log:rw
+#      - type: bind
+#        source: lnmpsock
+#        target: /sock
+
   yarn:
     image: kelvinblood/yarn
     restart: always
@@ -46,7 +62,12 @@ services:
     volumes:
       - ./:/var/www/html:rw
       - ./tmp/yarn:/usr/local/share/.cache/yarn
-#    entrypoint:  [ "/bin/bash"]
+    entrypoint:
+      - npm
+      - run
+      - watch
+      - --
+      - --watch-poll
 #    working_dir: /var/www/html
 
   pgsql:
