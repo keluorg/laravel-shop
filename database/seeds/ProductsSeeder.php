@@ -20,4 +20,31 @@ class ProductsSeeder extends Seeder
             $product->update(['price' => $skus->min('price')]);
         }
     }
+
+    /**
+     * php artisan db:seed --class=ProductsSeeder
+     * 注册用户
+     *** php artisan tinker
+     *** factory(App\Models\User::class)->make()
+     *** factory(App\Models\User::class, 3)->create([])
+     *
+     * 用户地址: database/factories/UserAddressFactory.php
+     *** php artisan tinker
+     *** factory(App\Models\UserAddress::class)->make()
+     *** factory(App\Models\UserAddress::class, 3)->create(['user_id' => 1])
+     *
+     * php artisan vendor:publish --provider="Encore\Admin\AdminServiceProvider"
+     * php artisan admin:install
+     * php artisan admin:make UsersController --model=App\\Models\\User
+     * 默认的账号和密码都是 admin
+     * 后天汉化，增加用户管理页面
+     * 角色和权限
+     * operator 12345
+     *
+     * 后台增加商品管理页面
+     *
+     * 生成商品：
+     * php artisan db:seed --class=ProductsSeeder
+     *
+     */
 }
