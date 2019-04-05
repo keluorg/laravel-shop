@@ -56,6 +56,7 @@ return [
 
     'asset_url' => env('ASSET_URL', null),
 
+    'order_ttl' => env('ORDER_TTL',1800),
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
