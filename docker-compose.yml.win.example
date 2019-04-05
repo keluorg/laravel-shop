@@ -1,4 +1,5 @@
 version:  '3.2'
+
 services:
   nginx:
     image: openresty/openresty:alpine
@@ -52,6 +53,14 @@ services:
 #      - type: bind
 #        source: lnmpsock
 #        target: /sock
+
+  redis:
+    image: redis
+    container_name: redis
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
 
   yarn:
     image: kelvinblood/yarn
