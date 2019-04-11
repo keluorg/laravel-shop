@@ -22,7 +22,22 @@ class ProductsSeeder extends Seeder
     }
 
     /**
-     * php artisan db:seed --class=ProductsSeeder
+     * 编辑 .env
+     * 修改系统docker服务器地址：
+     * "registry-mirror": ["https://7bezldxe.mirror.aliyuncs.com"]
+     *
+     * 创建数据库：
+     * su postgres
+     * psql
+     * \password postgres
+     * CREATE USER shop WITH PASSWORD 'shop';
+     * CREATE DATABASE shop OWNER shop;
+     * GRANT ALL PRIVILEGES ON DATABASE shop to shop;
+     *
+     * composer install --ignore-platform-reqs
+     * yarn add china-area-data
+     * yarn add sweetalert
+     *
      * 注册用户
      *** php artisan tinker
      *** factory(App\Models\User::class)->make()
@@ -46,5 +61,11 @@ class ProductsSeeder extends Seeder
      * 生成商品：
      * php artisan db:seed --class=ProductsSeeder
      *
+     * 后台汉化+管理页面生成
+     *
+     * https://openhome.alipay.com/platform/appDaily.htm?tab=info
+     * 'app_id' => '你在支付宝沙箱看到的appid',
+     * 'ali_public_key' => '支付宝沙箱显示的公钥',
+     * 'private_key' => '刚刚生成的私钥',
      */
 }
