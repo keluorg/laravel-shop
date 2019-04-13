@@ -20,6 +20,14 @@ Route::redirect('/', '/products')->name('root');
 Route::get('products', 'ProductsController@index')->name('products.index');
 Auth::routes(['verify' => true]);
 
+Route::get('alipay', function() {
+    return app('alipay')->web([
+        'out_trade_no' => time(),
+        'total_amount' => '0.01',
+        'subject' => 'test subject - 测试',
+    ]);
+});
+
 Route::group(['middleware' => ['auth', 'verified']], function() {
     Route::get('user_addresses', 'UserAddressesController@index')->name('user_addresses.index');
     Route::get('user_addresses/create', 'UserAddressesController@create')->name('user_addresses.create');
