@@ -28,7 +28,8 @@ services:
       - "8443:8443"
 
   php:
-    build: ./docker/php
+#    build: ./docker/php
+    image: kelvinblood/php:7.1-fpm
     restart: always
     container_name: php
     volumes:
@@ -39,9 +40,35 @@ services:
       - type: bind
         source: lnmpsock
         target: /sock
+    environment:
+      TIME_ZONE: Asia/Shanghai
     privileged: true
     links:
       - "pgsql:pgsql"
+
+  laravel:
+    image: kelvinblood/php:7.1-fpm
+    container_name: laravel-queue
+    restart: always
+    volumes:
+      - ./:/var/www/html:rw
+      - ./docker/php/php-fpm.d:/usr/local/etc/php-fpm.d
+      - ./docker/php/conf/php-fpm.conf:/usr/local/etc/php-fpm.conf
+      - ./docker/log:/log:rw
+      - type: bind
+        source: lnmpsock
+        target: /sock
+    links:
+      - "pgsql:pgsql"
+    entrypoint:  [ "php", "artisan", "queue:work", "--sleep=3", "--daemon", "--tries=3" ]
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    restart: always
+    ports:
+      - "8025:8025"
+      - "1025:1025"
 
   composer:
     image: composer:1.4.2
