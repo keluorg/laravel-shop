@@ -113,6 +113,12 @@
                             <button class="btn btn-sm btn-danger" id="btn-apply-refund">申请退款</button>
                         </div>
                         @endif
+                        @if(isset($order->extra['refund_disagree_reason']))
+                        <div>
+                            <span>拒绝退款理由：</span>
+                            <div class="value">{{ $order->extra['refund_disagree_reason'] }}</div>
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
