@@ -67,5 +67,10 @@ class ProductsSeeder extends Seeder
      * 'app_id' => '你在支付宝沙箱看到的appid',
      * 'ali_public_key' => '支付宝沙箱显示的公钥',
      * 'private_key' => '刚刚生成的私钥',
+     *
+     *
+     *
+     * https://requestbin.fullcontact.com/
+     *
      */
 }
