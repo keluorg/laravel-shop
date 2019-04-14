@@ -50,13 +50,12 @@ class ProductsSeeder extends Seeder
      *
      * php artisan vendor:publish --provider="Encore\Admin\AdminServiceProvider"
      * php artisan admin:install
-     * php artisan admin:make UsersController --model=App\\Models\\User
      * 默认的账号和密码都是 admin
      * 后天汉化，增加用户管理页面
      * 角色和权限
      * operator 12345
      *
-     * 后台增加商品管理页面
+     * 后台增加用户管理、商品管理、订单管理页面
      *
      * 生成商品：
      * php artisan db:seed --class=ProductsSeeder
