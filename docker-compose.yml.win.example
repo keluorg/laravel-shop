@@ -70,6 +70,15 @@ services:
       - "8025:8025"
       - "1025:1025"
 
+  frpc:
+    image: alexzhuo/frp
+    container_name: frpc
+    restart: always
+    volumes:
+      - ./docker/frpc/frpc.ini:/tmp/frpc.ini
+    network_mode: "host"
+    entrypoint:  [ "/usr/bin/frp/frpc", "-c", "/tmp/frpc.ini" ]
+
   composer:
     image: composer:1.4.2
     restart: always
@@ -79,12 +88,6 @@ services:
     volumes:
       - ./:/app:rw
     entrypoint:  [ "/bin/bash"]
-#      - ./docker/php/php-fpm.d:/usr/local/etc/php-fpm.d
-#      - ./docker/php/conf/php-fpm.conf:/usr/local/etc/php-fpm.conf
-#      - ./docker/log:/log:rw
-#      - type: bind
-#        source: lnmpsock
-#        target: /sock
 
   redis:
     image: redis
@@ -102,14 +105,16 @@ services:
     tty: true
     volumes:
       - ./:/var/www/html:rw
-      - ./tmp/yarn:/usr/local/share/.cache/yarn
+      - type: bind
+        source: yarnfile
+        target: /usr/local/share/.cache/yarn
+#    entrypoint:  [ "/bin/bash"]
     entrypoint:
       - npm
       - run
       - watch
       - --
       - --watch-poll
-#    working_dir: /var/www/html
 
   pgsql:
     image: kelvinblood/pgsql:v9.4-alpine
@@ -122,7 +127,7 @@ services:
         target: /var/lib/postgresql/data
       - ./docker/psql/dump:/var/lib/postgresql/dump:rw
     environment:
-      DBNAME: vpn
+      DBNAME: shop
     ports:
       - "5432:5432"
 
@@ -133,3 +138,6 @@ volumes:
   lnmpdb:
     external:
       name: lnmpdb
+  yarnfile:
+    external:
+      name: yarnfile

@@ -35,8 +35,12 @@ class ProductsSeeder extends Seeder
      * GRANT ALL PRIVILEGES ON DATABASE shop to shop;
      *
      * composer install --ignore-platform-reqs
+     *
+     * yarn config set registry 'https://registry.npm.taobao.org'
+     * SASS_BINARY_SITE=http://npm.taobao.org/mirrors/node-sass yarn
      * yarn add china-area-data
      * yarn add sweetalert
+     * npm run watch-poll
      *
      * 注册用户
      *** php artisan tinker
@@ -47,6 +51,8 @@ class ProductsSeeder extends Seeder
      *** php artisan tinker
      *** factory(App\Models\UserAddress::class)->make()
      *** factory(App\Models\UserAddress::class, 3)->create(['user_id' => 1])
+     * 生成商品：
+     * php artisan db:seed --class=ProductsSeeder
      *
      * php artisan vendor:publish --provider="Encore\Admin\AdminServiceProvider"
      * php artisan admin:install
@@ -57,8 +63,6 @@ class ProductsSeeder extends Seeder
      *
      * 后台增加用户管理、商品管理、订单管理页面
      *
-     * 生成商品：
-     * php artisan db:seed --class=ProductsSeeder
      *
      * 后台汉化+管理页面生成
      *
@@ -66,7 +70,6 @@ class ProductsSeeder extends Seeder
      * 'app_id' => '你在支付宝沙箱看到的appid',
      * 'ali_public_key' => '支付宝沙箱显示的公钥',
      * 'private_key' => '刚刚生成的私钥',
-     *
      *
      *
      * https://requestbin.fullcontact.com/
